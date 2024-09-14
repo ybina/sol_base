@@ -1,17 +1,14 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{self, token::Token, associated_token::AssociatedToken};
 use anchor_spl::token::{MintTo, Mint, TokenAccount};
-//use anchor_spl::token::{InitializeMint, MintTo, Mint, TokenAccount};
-//use mpl_token_metadata::types::DataV2;
+use mpl_token_metadata::instructions;
 
-declare_id!("7wEstvdML27vJt3LsNmoopaQip9GxGyKb9GPNHNFSZLs");
+declare_id!("Btg3aiddZbuDfx6rqLYrRGymsom6qVbbFDFH1iBqxrUy");
 
 #[program]
 pub mod test4 {
-    use std::borrow::Borrow;
+    use mpl_token_metadata::types::DataV2;
 
-    // use anchor_lang::system_program;
-    //use anchor_spl::{token::{initialize_mint, InitializeMint, mint_to, MintTo, transfer, Transfer, burn, Burn, freeze_account, FreezeAccount, close_account, CloseAccount, thaw_account, ThawAccount, set_authority, SetAuthority, spl_token::instruction::AuthorityType}, associated_token, metadata::{create_metadata_accounts_v3, create_master_edition_v3}};
     use super::*;
 
     pub fn init_program(ctx: Context<InitAccounts>) -> Result<()> {
@@ -25,60 +22,66 @@ pub mod test4 {
         Ok(())
     }
 
-    pub fn create_token(ctx: Context<CreateToken>, decimals:u8, amount:u64) -> Result<()> {
+    pub fn create_token(ctx: Context<CreateToken>, name: String, symbol: String, uri: String) -> Result<()> {
+        msg!("---auth_pda:{}", ctx.accounts.authority_pda.key);
+        msg!("---mint_pda:{}", ctx.accounts.mint_pda.key());
+        msg!("---token_pda:{}", ctx.accounts.token_pda.key());
+        let (expected_metadata_pda, bump) = Pubkey::find_program_address(
+            &[
+                b"metadata",
+                mpl_token_metadata::ID.as_ref(),
+                ctx.accounts.mint_pda.key().as_ref()
+            ],
+            &mpl_token_metadata::ID
+        );
+        msg!("---expected_metadata_pda:{}", expected_metadata_pda.key());
+        msg!("---expexted_metadata_pda_bump:{}",  bump);
 
-        // system_program::create_account(
-        //     CpiContext::new(
-        //         ctx.accounts.system_program.to_account_info(), 
-        //         system_program::CreateAccount {
-        //             from: ctx.accounts.signer.to_account_info(), 
-        //             to: ctx.accounts.mint_token.to_account_info()}
-        //     ), 
-        //     10_000_000, 
-        //     82,
-        //     &anchor_spl::token::ID,
-        // )?;
-        // anchor_spl::token::initialize_mint(
-        //     CpiContext::new(
-        //     ctx.accounts.token_program.to_account_info(),
-        //     InitializeMint{
-        //         mint:ctx.accounts.mint_token.to_account_info(),
-        //         rent:ctx.accounts.rent.to_account_info()}
-        // ), 
-        // decimals,
-        // // 铸造权限设为程序PDA
-        // ctx.accounts.authority_pda.key,
-        // // 不设置冻结权限
-        // None)?;
-        
-        // anchor_spl::associated_token::create(
-        //     CpiContext::new(
-        //         ctx.accounts.associate_token_program.to_account_info(), 
-        //         anchor_spl::associated_token::Create { 
-        //             payer: ctx.accounts.signer.to_account_info(), 
-        //             associated_token: ctx.accounts.token_pda.to_account_info(), 
-        //             authority: ctx.accounts.authority_pda.to_account_info(),
-        //             mint: ctx.accounts.mint_token.to_account_info(), 
-        //             system_program: ctx.accounts.system_program.to_account_info(), 
-        //             token_program: ctx.accounts.token_program.to_account_info() 
-        //         }
-        //     ).with_signer(&[&[b"token_pda", &ctx.accounts.counter.count.to_le_bytes()]])
-        // )?;
-        let bump_seed = ctx.bumps.mint_token;
-        
-        let signer_seeds: &[&[&[u8]]] = &[&[b"mint", &[bump_seed]]];
+        let auth_bump = ctx.bumps.authority_pda;
+        let auth_signer_seeds: &[&[u8]] = &[b"authority_pda", &[auth_bump]];
         anchor_spl::token::mint_to(
             CpiContext::new(
                 ctx.accounts.token_program.to_account_info(),
                 MintTo{
                     authority: ctx.accounts.authority_pda.to_account_info(),
-                    mint:ctx.accounts.mint_token.to_account_info(),
+                    mint:ctx.accounts.mint_pda.to_account_info(),
                     to:ctx.accounts.token_pda.to_account_info()}
-            ).with_signer(signer_seeds), 
-            amount
+            ).with_signer(&[auth_signer_seeds]),
+            10000000000000,
         )?;
+
+        let metadata_bump = ctx.bumps.metadata;
+        msg!("---ctx metadata_bump: {}", metadata_bump);
+        let metadata_signer_seeds: &[&[u8]] = &[b"metadata", mpl_token_metadata::ID.as_ref(), ctx.accounts.mint_pda.to_account_info().key.as_ref(), &[metadata_bump]];
+
+        instructions::CreateMetadataAccountV3Cpi::new(
+            &ctx.accounts.token_metadata_program.to_account_info(),
+            instructions::CreateMetadataAccountV3CpiAccounts {
+                payer: &ctx.accounts.signer.to_account_info(),
+                metadata: &ctx.accounts.metadata.to_account_info(),
+                mint: &ctx.accounts.mint_pda.to_account_info(),
+                mint_authority: &ctx.accounts.authority_pda.to_account_info(),
+                update_authority: (&ctx.accounts.authority_pda.to_account_info(),false),
+                system_program: &ctx.accounts.system_program.to_account_info(),
+                rent: Some(&ctx.accounts.rent.to_account_info()),
+            },
+            instructions::CreateMetadataAccountV3InstructionArgs {
+                data: DataV2 {
+                    name:name,
+                    symbol:symbol,
+                    uri:uri,
+                    seller_fee_basis_points: 0,
+                    creators: None,
+                    collection:None,
+                    uses:None
+                },
+                is_mutable: false,
+                collection_details:None,
+            }
+        ).invoke_signed(&[auth_signer_seeds, metadata_signer_seeds])?;
         let counter = &mut ctx.accounts.counter;
         counter.count += 1;
+        msg!("---tx end counter:{}", counter.count);
         Ok(())
     }
 }
@@ -114,19 +117,22 @@ pub struct InitAccounts<'info> {
 #[derive(Accounts)]
 pub struct CreateToken<'info> {
     ///CHECK:
-    #[account()]
+    #[account(
+        mut,
+        seeds = [b"authority_pda".as_ref()],
+        bump
+    )]
     pub authority_pda: AccountInfo<'info>,
     ///CHECK:
     #[account(
         init,
         payer=signer,
         seeds = [b"mint".as_ref(), &counter.count.to_le_bytes()],
-        // space = 8 + 32 + std::mem::size_of::<Mint>() + 8,
         bump,
         mint::decimals = 9,
         mint::authority = authority_pda,
     )]
-    pub mint_token:Account<'info, Mint>,
+    pub mint_pda:Account<'info, Mint>,
 
     ///CHECK:
     #[account(mut)]
@@ -136,18 +142,31 @@ pub struct CreateToken<'info> {
     #[account(
         init,
         payer=signer,
-        associated_token::mint = mint_token,
+        associated_token::mint = mint_pda,
         associated_token::authority = authority_pda,
     )]
     pub token_pda: Account<'info, TokenAccount>,
 
+    ///CHECK:
+    #[account(
+        mut,
+        seeds=[b"metadata", token_metadata_program.key().as_ref(), mint_pda.key().as_ref()],
+        bump,
+        seeds::program = token_metadata_program.key()
+    )]
+    pub metadata: UncheckedAccount<'info>,
+
+    ///CHECK:
+    #[account(address = mpl_token_metadata::ID)]
+    pub token_metadata_program: UncheckedAccount<'info>,
     #[account(mut)]
     pub signer:Signer<'info>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program:Program<'info,System>,
     pub token_program:Program<'info,Token>,
     pub associate_token_program:Program<'info,AssociatedToken>,
-    pub rent:Sysvar<'info,Rent>
+    
+    pub rent:Sysvar<'info, Rent>
 }
 
 #[account]
