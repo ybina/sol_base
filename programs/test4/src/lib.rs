@@ -3,7 +3,7 @@ use anchor_spl::{self, token::Token, associated_token::AssociatedToken};
 use anchor_spl::token::{MintTo, Mint, TokenAccount};
 use mpl_token_metadata::instructions;
 
-declare_id!("GuYrycnKrFddawdYgJBqSajswksuEqTxYaqrsGiBCXPu");
+declare_id!("FHqGNhPX28H4Gf87VUAQ4pxGYm1WnE6eZE2H1LVMbcPn");
 
 #[program]
 pub mod test4 {
@@ -50,12 +50,6 @@ pub mod test4 {
             1000000000000,
         )?;
 
-        let metadata_bump = ctx.bumps.metadata;
-        msg!("---ctx metadata_bump: {}", metadata_bump);
-        let binding = ctx.accounts.mint_pda.key();
-        let mint_pda_key = binding.as_ref();
-        let metadata_signer_seeds: &[&[u8]] = &[b"metadata", mpl_token_metadata::ID.as_ref(), mint_pda_key, &[metadata_bump]];
-
         instructions::CreateMetadataAccountV3Cpi::new(
             &ctx.accounts.token_metadata_program.to_account_info(),
             instructions::CreateMetadataAccountV3CpiAccounts {
@@ -80,7 +74,7 @@ pub mod test4 {
                 is_mutable: false,
                 collection_details:None,
             }
-        ).invoke_signed(&[auth_signer_seeds, metadata_signer_seeds])?;
+        ).invoke_signed(&[auth_signer_seeds])?;
         let counter = &mut ctx.accounts.counter;
         counter.count += 1;
         msg!("---tx end counter:{}", counter.count);

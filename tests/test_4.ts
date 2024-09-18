@@ -48,7 +48,8 @@ describe("test4", () => {
         [Buffer.from("account_counter")],
         program.programId
       );
-      const tx = await program.methods.createToken("pe coin", "pec", "https://www.baidu.com/src").accounts({
+      const tx = await program.methods.createToken(
+        "pd coin", "pdc", "https://www.google.com").accounts({
         signer: signer,
         counter: counterPda,
       }).rpc({
