@@ -3,7 +3,7 @@ use anchor_spl::{self, token::Token, associated_token::AssociatedToken};
 use anchor_spl::token::{MintTo, Mint, TokenAccount};
 use mpl_token_metadata::instructions;
 
-declare_id!("Btg3aiddZbuDfx6rqLYrRGymsom6qVbbFDFH1iBqxrUy");
+declare_id!("GuYrycnKrFddawdYgJBqSajswksuEqTxYaqrsGiBCXPu");
 
 #[program]
 pub mod test4 {
@@ -47,12 +47,14 @@ pub mod test4 {
                     mint:ctx.accounts.mint_pda.to_account_info(),
                     to:ctx.accounts.token_pda.to_account_info()}
             ).with_signer(&[auth_signer_seeds]),
-            10000000000000,
+            1000000000000,
         )?;
 
         let metadata_bump = ctx.bumps.metadata;
         msg!("---ctx metadata_bump: {}", metadata_bump);
-        let metadata_signer_seeds: &[&[u8]] = &[b"metadata", mpl_token_metadata::ID.as_ref(), ctx.accounts.mint_pda.to_account_info().key.as_ref(), &[metadata_bump]];
+        let binding = ctx.accounts.mint_pda.key();
+        let mint_pda_key = binding.as_ref();
+        let metadata_signer_seeds: &[&[u8]] = &[b"metadata", mpl_token_metadata::ID.as_ref(), mint_pda_key, &[metadata_bump]];
 
         instructions::CreateMetadataAccountV3Cpi::new(
             &ctx.accounts.token_metadata_program.to_account_info(),
@@ -164,8 +166,6 @@ pub struct CreateToken<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program:Program<'info,System>,
     pub token_program:Program<'info,Token>,
-    pub associate_token_program:Program<'info,AssociatedToken>,
-    
     pub rent:Sysvar<'info, Rent>
 }
 

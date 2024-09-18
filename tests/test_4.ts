@@ -29,16 +29,16 @@ describe("test4", () => {
   //   }
   // });
   it("create token!", async () => {
-    const TOKEN_METADATA_PROGRAM_ID = new anchor.web3.PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
-    const mintToken = anchor.web3.Keypair.generate();
-    const mintPubkey = mintToken.publicKey;
-    const [metadataPDA, _] = await anchor.web3.PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("metadata"),
-        TOKEN_METADATA_PROGRAM_ID.toBuffer()
-      ],
-      TOKEN_METADATA_PROGRAM_ID,
-    )
+    // const TOKEN_METADATA_PROGRAM_ID = new anchor.web3.PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+    // const mintToken = anchor.web3.Keypair.generate();
+    // const mintPubkey = mintToken.publicKey;
+    // const [metadataPDA, _] = await anchor.web3.PublicKey.findProgramAddressSync(
+    //   [
+    //     Buffer.from("metadata"),
+    //     TOKEN_METADATA_PROGRAM_ID.toBuffer()
+    //   ],
+    //   TOKEN_METADATA_PROGRAM_ID,
+    // )
     try {
       // const [authorityPda, authorityBump] = await anchor.web3.PublicKey.findProgramAddressSync(
       //   [Buffer.from("authority_pda")],
@@ -48,7 +48,7 @@ describe("test4", () => {
         [Buffer.from("account_counter")],
         program.programId
       );
-      const tx = await program.methods.createToken("pe17692 coin", "pe17692", "https://www.baidu.com/src").accounts({
+      const tx = await program.methods.createToken("pe coin", "pec", "https://www.baidu.com/src").accounts({
         signer: signer,
         counter: counterPda,
       }).rpc({
@@ -62,6 +62,5 @@ describe("test4", () => {
     } catch(error) {
       console.log("error:", error)
     }
-    
   });
 });
