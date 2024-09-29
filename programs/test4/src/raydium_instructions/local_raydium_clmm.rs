@@ -1,9 +1,7 @@
 use anchor_lang::prelude::*;
 use solana_program::instruction::Instruction;
-use anchor_lang::solana_program::{
-    program::invoke,
-    program::invoke_signed,
-};
+//use anchor_lang::solana_program::program::invoke;
+use anchor_lang::solana_program::program::invoke_signed;
 
 pub mod local_raydium_clmm {
     anchor_lang::declare_id!("devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH"); // 外部程序的 Program ID
@@ -28,35 +26,37 @@ pub mod local_raydium_instruction {
 }
 
 pub fn cpi_create_pool<'info>(
-    ctx: Context<'_, '_, '_, 'info, CallCreatePool<'info>>,
+    cpi_accounts: CallCreatePool<'info>,
     sqrt_price_x64: u128,
     open_time: u64,
     token_mint0: AccountInfo<'info>,
     token_mint1: AccountInfo<'info>,
     token_vault0: AccountInfo<'info>,
     token_vault1: AccountInfo<'info>,
+    // token_pda_seeds: &[&[u8]],
+    auth_pda_seeds: &[&[u8]]
     
 ) -> Result<()> {
     // 定义 createPool 调用所需的账户元数据
     let accounts = vec![
-        AccountMeta::new(ctx.accounts.pool_creator.key(), true),
-        AccountMeta::new_readonly(ctx.accounts.amm_config.key(), false),
-        AccountMeta::new(ctx.accounts.pool_state.key(), false),
+        AccountMeta::new(cpi_accounts.pool_creator.key(), true),
+        AccountMeta::new_readonly(cpi_accounts.amm_config.key(), false),
+        AccountMeta::new(cpi_accounts.pool_state.key(), false),
         AccountMeta::new_readonly(token_mint0.key(), false),
         AccountMeta::new_readonly(token_mint1.key(), false),
         AccountMeta::new(token_vault0.key(), false),
         AccountMeta::new(token_vault1.key(), false),
-        AccountMeta::new(ctx.accounts.observation_state.key(), false),
-        AccountMeta::new(ctx.accounts.tick_array_bitmap.key(), false),
-        AccountMeta::new_readonly(ctx.accounts.token_program0.key(), false),
-        AccountMeta::new_readonly(ctx.accounts.token_program1.key(), false),
-        AccountMeta::new_readonly(ctx.accounts.system_program.key(), false),
-        AccountMeta::new_readonly(ctx.accounts.rent.key(), false),
+        AccountMeta::new(cpi_accounts.observation_state.key(), false),
+        AccountMeta::new(cpi_accounts.tick_array_bitmap.key(), false),
+        AccountMeta::new_readonly(cpi_accounts.token_program0.key(), false),
+        AccountMeta::new_readonly(cpi_accounts.token_program1.key(), false),
+        AccountMeta::new_readonly(cpi_accounts.system_program.key(), false),
+        AccountMeta::new_readonly(cpi_accounts.rent.key(), false),
     ];
 
     // 构建 createPool 的 CPI 调用
     let create_pool_ix = Instruction {
-        program_id: ctx.accounts.raydium_clmm_program.key(),
+        program_id: cpi_accounts.raydium_clmm_program.key(),
         accounts,
         data: local_raydium_instruction::CreatePool {
             sqrt_price_x64,
@@ -64,55 +64,64 @@ pub fn cpi_create_pool<'info>(
         }.data(),
     };
 
-    // CPI 调用
-    invoke(
-        &create_pool_ix,
+    invoke_signed(
+        &create_pool_ix, 
         &[
-            ctx.accounts.pool_creator.to_account_info(),
-            ctx.accounts.amm_config.to_account_info(),
-            ctx.accounts.pool_state.to_account_info(),
+            cpi_accounts.pool_creator.to_account_info(),
+            cpi_accounts.amm_config.to_account_info(),
+            cpi_accounts.pool_state.to_account_info(),
             token_mint0.to_account_info(),
             token_mint1.to_account_info(),
             token_vault0.to_account_info(),
             token_vault1.to_account_info(),
-            ctx.accounts.observation_state.to_account_info(),
-            ctx.accounts.tick_array_bitmap.to_account_info(),
-            ctx.accounts.token_program0.to_account_info(),
-            ctx.accounts.token_program1.to_account_info(),
-            ctx.accounts.system_program.to_account_info(),
-            ctx.accounts.rent.to_account_info(),
-            ctx.accounts.raydium_clmm_program.to_account_info(),
-        ]
+            cpi_accounts.observation_state.to_account_info(),
+            cpi_accounts.tick_array_bitmap.to_account_info(),
+            cpi_accounts.token_program0.to_account_info(),
+            cpi_accounts.token_program1.to_account_info(),
+            cpi_accounts.system_program.to_account_info(),
+            cpi_accounts.rent.to_account_info(),
+            cpi_accounts.raydium_clmm_program.to_account_info(),
+        ], 
+        &[auth_pda_seeds],
     )?;
-
     Ok(())
 }
 
 #[derive(Accounts)]
 pub struct CallCreatePool<'info> {
     /// CPI 调用账户配置
+    ///CHECK:
     #[account(mut)]
     pub pool_creator: AccountInfo<'info>,
+    ///CHECK:
     pub amm_config: AccountInfo<'info>,
+    ///CHECK:
     #[account(mut)]
     pub pool_state: AccountInfo<'info>,
+    ///CHECK:
     pub token_mint0: AccountInfo<'info>,
+    ///CHECK:
     pub token_mint1: AccountInfo<'info>,
+    ///CHECK:
     #[account(mut)]
     pub token_vault0: AccountInfo<'info>,
+    ///CHECK:
     #[account(mut)]
     pub token_vault1: AccountInfo<'info>,
+    ///CHECK:
     #[account(mut)]
     pub observation_state: AccountInfo<'info>,
+    ///CHECK:
     #[account(mut)]
     pub tick_array_bitmap: AccountInfo<'info>,
+    ///CHECK:
     pub token_program0: AccountInfo<'info>,
+    ///CHECK:
     pub token_program1: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
-    /// 外部 Raydium 程序 ID
+    ///CHECK: 外部 Raydium 程序 ID
     #[account(address = local_raydium_clmm::ID)]
     pub raydium_clmm_program: AccountInfo<'info>, 
-
 }
 

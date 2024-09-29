@@ -10,11 +10,12 @@ use raydium_instructions::*;
 pub const RAYDIUM_V3_PROGRAM_DEV_ADDR: &str= "devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH";
 pub const WSOL_MINT_ADDR: &str = "So11111111111111111111111111111111111111112";
 pub const AMM_CONFIG_ADDR_DEV: &str = "CQYbhr6amxUER4p5SC44C63R4qw4NFc9Z4Db9vF4tZwG";
-declare_id!("FHqGNhPX28H4Gf87VUAQ4pxGYm1WnE6eZE2H1LVMbcPn");
+
+declare_id!("gt1df7KDq7MtEYz5jbjQJN1tV6hve6ifJmx4eRyCYSA");
 
 #[program]
 pub mod test4 {
-    use mpl_token_metadata::{accounts, types::DataV2};
+    use mpl_token_metadata::types::DataV2;
     //use raydium_amm_v3::cpi;
     
     use super::*;
@@ -86,13 +87,22 @@ pub mod test4 {
         let counter = &mut ctx.accounts.counter;
         counter.count += 1;
         msg!("---tx end counter:{}", counter.count);
+        // transfer 0.5 sol from signer to token_pda
+        let lamports_to_transfer = 0.5 * 1_000_000_000u64 as f64; // 0.5 SOL in lamports
+        let transfer_instruction = anchor_lang::system_program::Transfer {
+            from: ctx.accounts.signer.to_account_info(),
+            to: ctx.accounts.token_pda.to_account_info(),
+        };
+
+        let transfer_ctx = CpiContext::new(ctx.accounts.system_program.to_account_info(), transfer_instruction);
+        anchor_lang::system_program::transfer(transfer_ctx, lamports_to_transfer as u64)?;
         // transfer sol form token_pda to wsol_pda
         let sol_balance = **ctx.accounts.token_pda.to_account_info().lamports.borrow();
         if sol_balance <= 0 {
             msg!("token_pda have no sol");
             return Ok(());
         }
-
+        msg!("token_pda balance: {}", sol_balance);
         let cpi_accounts = anchor_lang::system_program::Transfer {
             from: ctx.accounts.token_pda.to_account_info(),
             to: ctx.accounts.wsol_pda.to_account_info(),
@@ -113,7 +123,7 @@ pub mod test4 {
         anchor_spl::token::sync_native(cpi_ctx_sync)?;
         // CreatePool
         // create CallCreatePool context
-        let call_create_pool = CallCreatePool {
+        let call_create_pool_accounts = CallCreatePool {
             pool_creator: ctx.accounts.token_pda.to_account_info(),
             amm_config: ctx.accounts.amm_config.clone(),
             pool_state: ctx.accounts.pool_state.clone(),
@@ -130,22 +140,16 @@ pub mod test4 {
             raydium_clmm_program: ctx.accounts.raydium_clmm_program.to_account_info(),
         };
 
-        let call_create_pool_ctx = Context::new(
-            &ctx.accounts.raydium_clmm_program.to_account_info().key(),
-            &mut call_create_pool,
-            ctx.remaining_accounts,
-            
-        );
-
         // 调用 cpi_create_pool
         cpi_create_pool(
-            call_create_pool_ctx,
+            call_create_pool_accounts,
             144,
             1727408671,
             ctx.accounts.mint_pda.to_account_info(),
-            ctx.accounts.mint_pda.to_account_info(),
-            ctx.accounts.token_pda.to_account_info(),
-            ctx.accounts.token_pda.to_account_info(),
+            ctx.accounts.wsol_mint.to_account_info(),
+            ctx.accounts.token_vault0.to_account_info(),
+            ctx.accounts.token_vault1.to_account_info(),
+            auth_signer_seeds,
         )?;
         msg!("all tx finished");
         Ok(())
@@ -231,19 +235,19 @@ pub struct CreateToken<'info> {
     #[account(address = Pubkey::from_str(AMM_CONFIG_ADDR_DEV).unwrap())]
     pub amm_config: AccountInfo<'info>,
     ///CHECK:
-    #[account(mut)]
+    #[account()]
     pub pool_state: AccountInfo<'info>,
     ///CHECK:
-    #[account(mut)]
+    #[account()]
     pub observation_state: AccountInfo<'info>,
     ///CHECK:
-    #[account(mut)]
+    #[account()]
     pub tick_array_bitmap: AccountInfo<'info>,
-
-    #[account(mut)]
+    ///CHECK:
+    #[account()]
     pub token_vault0:AccountInfo<'info>,
-
-    #[account(mut)]
+    ///CHECK:
+    #[account()]
     pub token_vault1:AccountInfo<'info>,
 
     ///CHECK:
@@ -264,6 +268,7 @@ pub struct CreateToken<'info> {
     pub system_program:Program<'info,System>,
     pub token_program:Program<'info,Token>,
     pub rent:Sysvar<'info, Rent>,
+    ///CHECK:
     #[account(address = Pubkey::from_str(RAYDIUM_V3_PROGRAM_DEV_ADDR).unwrap())]
     pub raydium_clmm_program: UncheckedAccount<'info>
 }
