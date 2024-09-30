@@ -140,7 +140,7 @@ pub mod test4 {
             raydium_clmm_program: ctx.accounts.raydium_clmm_program.to_account_info(),
         };
 
-        // 调用 cpi_create_pool
+        // call cpi_create_pool
         cpi_create_pool(
             call_create_pool_accounts,
             144,

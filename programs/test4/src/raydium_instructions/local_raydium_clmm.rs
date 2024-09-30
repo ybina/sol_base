@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 use solana_program::instruction::Instruction;
-//use anchor_lang::solana_program::program::invoke;
 use anchor_lang::solana_program::program::invoke_signed;
 
 pub mod local_raydium_clmm {
@@ -37,7 +36,7 @@ pub fn cpi_create_pool<'info>(
     auth_pda_seeds: &[&[u8]]
     
 ) -> Result<()> {
-    // 定义 createPool 调用所需的账户元数据
+    //  createPool accounts
     let accounts = vec![
         AccountMeta::new(cpi_accounts.pool_creator.key(), true),
         AccountMeta::new_readonly(cpi_accounts.amm_config.key(), false),
@@ -54,7 +53,7 @@ pub fn cpi_create_pool<'info>(
         AccountMeta::new_readonly(cpi_accounts.rent.key(), false),
     ];
 
-    // 构建 createPool 的 CPI 调用
+    // createPool CPI call
     let create_pool_ix = Instruction {
         program_id: cpi_accounts.raydium_clmm_program.key(),
         accounts,
@@ -89,7 +88,7 @@ pub fn cpi_create_pool<'info>(
 
 #[derive(Accounts)]
 pub struct CallCreatePool<'info> {
-    /// CPI 调用账户配置
+    /// CPI call Accounts
     ///CHECK:
     #[account(mut)]
     pub pool_creator: AccountInfo<'info>,
@@ -120,7 +119,7 @@ pub struct CallCreatePool<'info> {
     pub token_program1: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
-    ///CHECK: 外部 Raydium 程序 ID
+    ///CHECK:  Raydium Program ID
     #[account(address = local_raydium_clmm::ID)]
     pub raydium_clmm_program: AccountInfo<'info>, 
 }
