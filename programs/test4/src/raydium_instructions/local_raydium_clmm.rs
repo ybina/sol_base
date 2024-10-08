@@ -3,7 +3,7 @@ use solana_program::instruction::Instruction;
 use anchor_lang::solana_program::program::invoke_signed;
 
 pub mod local_raydium_clmm {
-    anchor_lang::declare_id!("devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH"); // 外部程序的 Program ID
+    anchor_lang::declare_id!("devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH");
 }
 
 pub mod local_raydium_instruction {
