@@ -5,8 +5,8 @@ use anchor_spl::{self, token::Token, associated_token::AssociatedToken};
 use anchor_spl::token::{MintTo, Mint, TokenAccount};
 use mpl_token_metadata::instructions;
 
-//pub mod raydium_instructions;
-//use raydium_instructions::local_raydium_clmm::cpi_create_pool;
+pub mod raydium_instructions;
+use raydium_instructions::local_raydium_clmm::cpi_create_pool;
 // use anchor_spl::token_interface::{Mint, TokenInterface};
 
 pub const RAYDIUM_V3_PROGRAM_DEV_ADDR: &str= "devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH";
@@ -98,46 +98,21 @@ pub mod test4 {
         let transfer_ctx = CpiContext::new(ctx.accounts.system_program.to_account_info(), transfer_instruction);
         anchor_lang::system_program::transfer(transfer_ctx, lamports_to_transfer as u64)?;
         msg!("transfer 0.5 sol to token_pda finished");
-        // // transfer sol form token_pda to wsol_pda
-        // let sol_balance = **ctx.accounts.token_pda.to_account_info().lamports.borrow();
-        // if sol_balance <= 0 {
-        //     msg!("token_pda have no sol");
-        //     return Ok(());
-        // }
-        // msg!("token_pda balance: {}", sol_balance);
-        // let cpi_accounts = anchor_lang::system_program::Transfer {
-        //     from: ctx.accounts.token_pda.to_account_info(),
-        //     to: ctx.accounts.wsol_pda.to_account_info(),
-        // };
-
-        // let cpi_ctx = CpiContext::new(ctx.accounts.system_program.to_account_info(), cpi_accounts);
-        // anchor_lang::system_program::transfer(cpi_ctx, sol_balance)?;
-
-        
-        // // ConvertSolToWsol
-        // let cpi_accounts_sync = SyncNative {
-        //     account: ctx.accounts.wsol_pda.to_account_info(),
-        // };
-        // msg!("convert sol to wsol finished");
-        // let cpi_ctx_sync = CpiContext::new(
-        //     ctx.accounts.token_program.to_account_info(), cpi_accounts_sync);
-        
-        // anchor_spl::token::sync_native(cpi_ctx_sync)?;
         
 
         // -----
-        // let sqrt_price_x64: u128 = 1583337266871351588490;
-        // let open_time: u64 = 1728543531;
-        // cpi_create_pool(
-        //     sqrt_price_x64, 
-        //     open_time, 
-        //     ctx.accounts.token_pda.to_account_info(), 
-        //     ctx.accounts.amm_config.clone(), 
-        //     ctx.accounts.mint_pda.to_account_info(), 
-        //     ctx.accounts.wsol_mint.clone(), 
-        //     ctx.accounts.token_program.to_account_info(), 
-        //     ctx.accounts.token_program.to_account_info(),
-        //     auth_signer_seeds)?;
+        let sqrt_price_x64: u128 = 1583337266871351588490;
+        let open_time: u64 = 1728543531;
+        cpi_create_pool(
+            sqrt_price_x64, 
+            open_time, 
+            ctx.accounts.token_pda.to_account_info(), 
+            ctx.accounts.amm_config.clone(), 
+            ctx.accounts.mint_pda.to_account_info(), 
+            ctx.accounts.wsol_mint.clone(), 
+            ctx.accounts.token_program.to_account_info(), 
+            ctx.accounts.token_program.to_account_info(),
+            auth_signer_seeds)?;
         // -----
         msg!("all tx finished");
         Ok(())
