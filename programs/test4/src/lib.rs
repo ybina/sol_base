@@ -99,7 +99,6 @@ pub mod test4 {
         anchor_lang::system_program::transfer(transfer_ctx, lamports_to_transfer as u64)?;
         msg!("transfer 0.5 sol to token_pda finished");
         
-
         // -----
         let sqrt_price_x64: u128 = 1583337266871351588490;
         let open_time: u64 = 1728543531;
