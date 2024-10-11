@@ -3,7 +3,7 @@ use anchor_spl::{self, token::Token, associated_token::AssociatedToken};
 use anchor_spl::token::{MintTo, Mint, TokenAccount};
 use mpl_token_metadata::instructions;
 
-declare_id!("FHqGNhPX28H4Gf87VUAQ4pxGYm1WnE6eZE2H1LVMbcPn");
+declare_id!("6Fur53jU5SQ5CPTrjux2UMdeuKxYxt6B3BezRGbfnX2D");
 
 #[program]
 pub mod test4 {
