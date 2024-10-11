@@ -2,21 +2,22 @@ use std::str::FromStr;
 
 use anchor_lang::prelude::*;
 use anchor_spl::{self, token::Token, associated_token::AssociatedToken};
-use anchor_spl::token::{MintTo, Mint, TokenAccount, SyncNative};
+use anchor_spl::token::{MintTo, Mint, TokenAccount};
 use mpl_token_metadata::instructions;
-pub mod raydium_instructions;
-use raydium_instructions::*;
+
+//pub mod raydium_instructions;
+//use raydium_instructions::local_raydium_clmm::cpi_create_pool;
+// use anchor_spl::token_interface::{Mint, TokenInterface};
 
 pub const RAYDIUM_V3_PROGRAM_DEV_ADDR: &str= "devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH";
 pub const WSOL_MINT_ADDR: &str = "So11111111111111111111111111111111111111112";
 pub const AMM_CONFIG_ADDR_DEV: &str = "CQYbhr6amxUER4p5SC44C63R4qw4NFc9Z4Db9vF4tZwG";
 
-declare_id!("gt1df7KDq7MtEYz5jbjQJN1tV6hve6ifJmx4eRyCYSA");
+declare_id!("JC4rGhSfS4YEv7Ejo35waBuZ71JJ6puPUXpJ6ERRcDxJ");
 
 #[program]
 pub mod test4 {
     use mpl_token_metadata::types::DataV2;
-    //use raydium_amm_v3::cpi;
     
     use super::*;
 
@@ -96,61 +97,48 @@ pub mod test4 {
 
         let transfer_ctx = CpiContext::new(ctx.accounts.system_program.to_account_info(), transfer_instruction);
         anchor_lang::system_program::transfer(transfer_ctx, lamports_to_transfer as u64)?;
-        // transfer sol form token_pda to wsol_pda
-        let sol_balance = **ctx.accounts.token_pda.to_account_info().lamports.borrow();
-        if sol_balance <= 0 {
-            msg!("token_pda have no sol");
-            return Ok(());
-        }
-        msg!("token_pda balance: {}", sol_balance);
-        let cpi_accounts = anchor_lang::system_program::Transfer {
-            from: ctx.accounts.token_pda.to_account_info(),
-            to: ctx.accounts.wsol_pda.to_account_info(),
-        };
+        msg!("transfer 0.5 sol to token_pda finished");
+        // // transfer sol form token_pda to wsol_pda
+        // let sol_balance = **ctx.accounts.token_pda.to_account_info().lamports.borrow();
+        // if sol_balance <= 0 {
+        //     msg!("token_pda have no sol");
+        //     return Ok(());
+        // }
+        // msg!("token_pda balance: {}", sol_balance);
+        // let cpi_accounts = anchor_lang::system_program::Transfer {
+        //     from: ctx.accounts.token_pda.to_account_info(),
+        //     to: ctx.accounts.wsol_pda.to_account_info(),
+        // };
 
-        let cpi_ctx = CpiContext::new(ctx.accounts.system_program.to_account_info(), cpi_accounts);
-        anchor_lang::system_program::transfer(cpi_ctx, sol_balance)?;
+        // let cpi_ctx = CpiContext::new(ctx.accounts.system_program.to_account_info(), cpi_accounts);
+        // anchor_lang::system_program::transfer(cpi_ctx, sol_balance)?;
 
         
-        // ConvertSolToWsol
-        let cpi_accounts_sync = SyncNative {
-            account: ctx.accounts.wsol_pda.to_account_info(),
-        };
-        msg!("convert sol to wsol finished");
-        let cpi_ctx_sync = CpiContext::new(
-            ctx.accounts.token_program.to_account_info(), cpi_accounts_sync);
+        // // ConvertSolToWsol
+        // let cpi_accounts_sync = SyncNative {
+        //     account: ctx.accounts.wsol_pda.to_account_info(),
+        // };
+        // msg!("convert sol to wsol finished");
+        // let cpi_ctx_sync = CpiContext::new(
+        //     ctx.accounts.token_program.to_account_info(), cpi_accounts_sync);
         
-        anchor_spl::token::sync_native(cpi_ctx_sync)?;
-        // CreatePool
-        // create CallCreatePool context
-        let call_create_pool_accounts = CallCreatePool {
-            pool_creator: ctx.accounts.token_pda.to_account_info(),
-            amm_config: ctx.accounts.amm_config.clone(),
-            pool_state: ctx.accounts.pool_state.clone(),
-            token_mint0: ctx.accounts.mint_pda.to_account_info(),
-            token_mint1: ctx.accounts.wsol_pda.to_account_info(),
-            token_vault0: ctx.accounts.token_vault0.to_account_info(),
-            token_vault1: ctx.accounts.token_vault1.to_account_info(), 
-            observation_state: ctx.accounts.observation_state.clone(),
-            tick_array_bitmap: ctx.accounts.tick_array_bitmap.clone(),
-            token_program0: ctx.accounts.token_program.to_account_info(),
-            token_program1: ctx.accounts.token_program.to_account_info(),
-            system_program: ctx.accounts.system_program.clone(),
-            rent: ctx.accounts.rent.clone(),
-            raydium_clmm_program: ctx.accounts.raydium_clmm_program.to_account_info(),
-        };
+        // anchor_spl::token::sync_native(cpi_ctx_sync)?;
+        
 
-        // call cpi_create_pool
-        cpi_create_pool(
-            call_create_pool_accounts,
-            144,
-            1727408671,
-            ctx.accounts.mint_pda.to_account_info(),
-            ctx.accounts.wsol_mint.to_account_info(),
-            ctx.accounts.token_vault0.to_account_info(),
-            ctx.accounts.token_vault1.to_account_info(),
-            auth_signer_seeds,
-        )?;
+        // -----
+        // let sqrt_price_x64: u128 = 1583337266871351588490;
+        // let open_time: u64 = 1728543531;
+        // cpi_create_pool(
+        //     sqrt_price_x64, 
+        //     open_time, 
+        //     ctx.accounts.token_pda.to_account_info(), 
+        //     ctx.accounts.amm_config.clone(), 
+        //     ctx.accounts.mint_pda.to_account_info(), 
+        //     ctx.accounts.wsol_mint.clone(), 
+        //     ctx.accounts.token_program.to_account_info(), 
+        //     ctx.accounts.token_program.to_account_info(),
+        //     auth_signer_seeds)?;
+        // -----
         msg!("all tx finished");
         Ok(())
     }
@@ -234,21 +222,6 @@ pub struct CreateToken<'info> {
     ///CHECK:
     #[account(address = Pubkey::from_str(AMM_CONFIG_ADDR_DEV).unwrap())]
     pub amm_config: AccountInfo<'info>,
-    ///CHECK:
-    #[account()]
-    pub pool_state: AccountInfo<'info>,
-    ///CHECK:
-    #[account()]
-    pub observation_state: AccountInfo<'info>,
-    ///CHECK:
-    #[account()]
-    pub tick_array_bitmap: AccountInfo<'info>,
-    ///CHECK:
-    #[account()]
-    pub token_vault0:AccountInfo<'info>,
-    ///CHECK:
-    #[account()]
-    pub token_vault1:AccountInfo<'info>,
 
     ///CHECK:
     #[account(
@@ -270,7 +243,7 @@ pub struct CreateToken<'info> {
     pub rent:Sysvar<'info, Rent>,
     ///CHECK:
     #[account(address = Pubkey::from_str(RAYDIUM_V3_PROGRAM_DEV_ADDR).unwrap())]
-    pub raydium_clmm_program: UncheckedAccount<'info>
+    pub raydium_clmm_program: UncheckedAccount<'info>,
 }
 
 #[account]
