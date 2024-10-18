@@ -1,15 +1,23 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{self, token::Token, associated_token::AssociatedToken};
-use anchor_spl::token::{MintTo, Mint, TokenAccount};
+use anchor_spl::token::{self, MintTo, Mint, TokenAccount, Transfer};
 use mpl_token_metadata::instructions;
 
-declare_id!("FHqGNhPX28H4Gf87VUAQ4pxGYm1WnE6eZE2H1LVMbcPn");
+declare_id!("7y72FYo5WiimjEG5hkxQK3iYGKDJCJHuCG4LHPxopvCV");
 
 #[program]
 pub mod test4 {
     use mpl_token_metadata::types::DataV2;
-
+    use anchor_lang::solana_program::program::{invoke, invoke_signed};
+    use anchor_lang::solana_program::system_instruction;
+    use crate::AmiErrorCode;
+    use crate::ami_private::cal_price;
+    
     use super::*;
+
+    pub const SOL_VALUE_BASE: f64 = 1_000_000_000.0;
+    pub const START_SOL_VIRTUAL_VALUE: f64 = 10.0;
+    pub const TOKEN_TOTAL_SUPPLY: u64 = 1500000000;
 
     pub fn init_program(ctx: Context<InitAccounts>) -> Result<()> {
         let counter = &mut ctx.accounts.counter;
@@ -22,10 +30,17 @@ pub mod test4 {
         Ok(())
     }
 
-    pub fn create_token(ctx: Context<CreateToken>, name: String, symbol: String, uri: String) -> Result<()> {
+    pub fn create_token(ctx: Context<CreateToken>, name: String, symbol: String, uri: String, sol_amount_req: f64) -> Result<()> {
+        let sol_amount: f64;
+        if sol_amount_req > 5.0 {
+            return Err(AmiErrorCode::InvalidAmount.into());
+        }
+        sol_amount = sol_amount_req;
         msg!("---auth_pda:{}", ctx.accounts.authority_pda.key);
         msg!("---mint_pda:{}", ctx.accounts.mint_pda.key());
         msg!("---token_pda:{}", ctx.accounts.token_pda.key());
+        let token_name:String = name.clone();
+        let token_symbol:String = symbol.clone();
         let (expected_metadata_pda, bump) = Pubkey::find_program_address(
             &[
                 b"metadata",
@@ -47,7 +62,7 @@ pub mod test4 {
                     mint:ctx.accounts.mint_pda.to_account_info(),
                     to:ctx.accounts.token_pda.to_account_info()}
             ).with_signer(&[auth_signer_seeds]),
-            1000000000000,
+            1000000000000000000,
         )?;
 
         instructions::CreateMetadataAccountV3Cpi::new(
@@ -78,8 +93,209 @@ pub mod test4 {
         let counter = &mut ctx.accounts.counter;
         counter.count += 1;
         msg!("---tx end counter:{}", counter.count);
+        // ---first buy----
+        let sol_amount_lamp: f64 = sol_amount * SOL_VALUE_BASE;
+        // sol trans
+        invoke(
+            &system_instruction::transfer(
+                &ctx.accounts.signer.key(),
+                &ctx.accounts.token_pda.key(),
+                sol_amount_lamp as u64,
+            ),
+            &[
+                ctx.accounts.signer.to_account_info(), 
+                ctx.accounts.token_pda.to_account_info(), 
+                ctx.accounts.system_program.to_account_info(),
+            ],
+        )?;
+        let end_sol_val = sol_amount;
+        let buy_pri = cal_price(0.0, end_sol_val);
+        let token_amount = sol_amount / buy_pri * 1_000_000_000.0;
+        // spl-token trans
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.token_pda.to_account_info(),
+            to: ctx.accounts.target_token_account.to_account_info(),
+            authority: ctx.accounts.authority_pda.to_account_info(),
+        };
+        
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let seeds_binding = [auth_signer_seeds];
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts).with_signer(&seeds_binding);
+        token::transfer(cpi_ctx, token_amount as u64)?;
+
+        emit!(CreateTokenEvent {
+            sol_amount: sol_amount,
+            token_amount: token_amount,
+            sol_price: buy_pri,
+            token_name:token_name,
+            token_symbol:token_symbol,
+            mint_addr: ctx.accounts.mint_pda.key(),
+            token_addr: ctx.accounts.token_pda.key(),
+        });
         Ok(())
     }
+
+    pub fn buy(ctx: Context<BuyTokenAccounts>, sol_amount_req: f64) -> Result<()> {
+        if ctx.accounts.trade_status.trade_status {
+            return Err(AmiErrorCode::InvalidTradeStatus.into());
+        }
+        if sol_amount_req > 5.0 {
+            return Err(AmiErrorCode::InvalidAmount.into());
+        }
+        msg!("create new token account to signer finished: {}", ctx.accounts.target_token_account.key());
+        let start_sol_lamp =  ctx.accounts.token_pda.to_account_info().lamports();
+        let start_sol_val =  start_sol_lamp as f64 / 1_000_000_000.0;
+        let sol_amount: f64;
+
+        if sol_amount_req + start_sol_val >= 59.0 {
+            sol_amount = 59.0 - sol_amount_req;
+            ctx.accounts.trade_status.trade_status = true
+        } else {
+            sol_amount = sol_amount_req
+        }
+
+        let trans_sol_lamp = sol_amount * SOL_VALUE_BASE;
+        let auth_bump = ctx.bumps.authority_pda;
+        let auth_signer_seeds: &[&[u8]] = &[b"authority_pda", &[auth_bump]];
+        invoke(
+            &system_instruction::transfer(
+                &ctx.accounts.signer.key(),
+                &ctx.accounts.token_pda.key(),
+                trans_sol_lamp as u64,
+            ),
+            &[
+                ctx.accounts.signer.to_account_info(), 
+                ctx.accounts.token_pda.to_account_info(), 
+                ctx.accounts.system_program.to_account_info(),
+            ],
+        )?;
+        msg!("buy transfer sol finished:{}", sol_amount);
+        
+        let end_sol_val = start_sol_val + sol_amount;
+        let buy_pri = cal_price(start_sol_val, end_sol_val);
+
+        let buy_amount = sol_amount / buy_pri * 1_000_000_000.0;
+        msg!("start_sol:{}, end_sol:{}, buy_pri:{}, buy_amount:{}", start_sol_val, end_sol_val, buy_pri, buy_amount);
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.token_pda.to_account_info(),
+            to: ctx.accounts.target_token_account.to_account_info(),
+            authority: ctx.accounts.authority_pda.to_account_info(),
+        };
+        
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let seeds_binding = [auth_signer_seeds];
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts).with_signer(&seeds_binding);
+        token::transfer(cpi_ctx, buy_amount as u64)?;
+        emit!(TradeTokenEvent{
+            trade_type: true,
+            sol_amount: sol_amount,
+            token_amount: buy_amount,
+            sol_price: buy_pri,
+            mint_addr: ctx.accounts.mint_pda.key(),
+            token_addr: ctx.accounts.token_pda.key(),
+        });
+        Ok(())
+    }
+
+    pub fn sell(ctx: Context<SellTokenAccounts>, sol_amount: f64) -> Result<()> {
+        if sol_amount > 5.0 {
+            return Err(AmiErrorCode::InvalidAmount.into());
+        }
+        msg!("sell amount: {}", sol_amount);
+        // not an empty account
+        if ctx.accounts.trade_status.get_lamports() > 0 && ctx.accounts.trade_status.to_account_info().data_len() > 0{
+            // have launched to raydium, can not sell here
+            if ctx.accounts.trade_status.trade_status {
+                return Err(AmiErrorCode::InvalidTradeStatus.into());
+            }
+        }
+        let auth_bump = ctx.bumps.authority_pda;
+        let auth_signer_seeds: &[&[u8]] = &[b"authority_pda", &[auth_bump]];
+
+        let total_sol_lamp = ctx.accounts.token_pda.to_account_info().lamports();
+        if sol_amount > (total_sol_lamp as f64 / SOL_VALUE_BASE) {
+            return Err(AmiErrorCode::InsufficientFunds.into());
+        }
+        
+        let start_sol_lamp =  ctx.accounts.token_pda.to_account_info().lamports();
+        let start_sol_val =  start_sol_lamp as f64 / SOL_VALUE_BASE;
+        let end_sol_val = start_sol_val + sol_amount;
+        let price = cal_price(start_sol_val, end_sol_val);
+
+        let token_required = sol_amount / price * 1_000_000_000.0;
+        msg!("sell token required:{}", sol_amount / price);
+        // transfer signer's spl token to program token_pda 
+        let cpi_accounts = Transfer {
+            from:ctx.accounts.target_token_account.to_account_info(), 
+            to: ctx.accounts.token_pda.to_account_info(),
+            authority:ctx.accounts.signer.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+        token::transfer(cpi_ctx, token_required as u64)?;
+        let sol_amount_lamp = sol_amount * 1_000_000_000.0;
+        // transfer sol of token_pda to signer
+        msg!("SELL: start transfer Sol to siger");
+        invoke_signed(
+            &system_instruction::transfer(
+                &ctx.accounts.token_pda.key(), 
+                &ctx.accounts.signer.key(), 
+                sol_amount_lamp as u64),
+            &[
+                ctx.accounts.token_pda.to_account_info(),
+                ctx.accounts.signer.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+            &[auth_signer_seeds]
+        )?;
+        emit!(TradeTokenEvent{
+            trade_type: false,
+            sol_amount: sol_amount,
+            token_amount: token_required,
+            sol_price: price,
+            mint_addr: ctx.accounts.mint_pda.key(),
+            token_addr: ctx.accounts.token_pda.key(),
+        });
+        Ok(())
+    }
+
+}
+
+mod ami_private {
+    #[inline(never)]
+    pub fn cal_price(start_sol: f64, end_sol: f64) -> f64 {
+        
+        let area_a = start_sol * start_sol * start_sol;
+        let area_b = end_sol * end_sol * end_sol;
+        let mut l  = (start_sol + end_sol) / 2.0;
+        let mut r = end_sol;
+        // 积分精度目标
+        let target = 0.0000001;
+
+        for _ in 0..1000 {
+            let x = (l + r) / 2.0;
+            let area_x = x * x * x;
+            let diff_a =  area_x - area_a;
+            let diff_b = area_b - area_x;
+            let diff = diff_b - diff_a;
+            if diff.abs() < target {
+                return round_to_10_decimal_price(x)
+            } else {
+                if diff < 0.0 {
+                    r = x;
+                } else {
+                    l = x;
+                }
+            }
+        }
+        -1.0
+    }
+
+    fn round_to_10_decimal_price(value: f64) -> f64 {
+        let pri: f64 = (value * value) / 8350000000.0 + 0.000000023;
+        (pri * 10000000000.0).round() / 10000000000.0
+    }
+
 }
 
 #[derive(Accounts)]
@@ -128,7 +344,7 @@ pub struct CreateToken<'info> {
         mint::decimals = 9,
         mint::authority = authority_pda,
     )]
-    pub mint_pda:Account<'info, Mint>,
+    pub mint_pda: Box<Account<'info, Mint>>,
 
     ///CHECK:
     #[account(mut)]
@@ -141,7 +357,7 @@ pub struct CreateToken<'info> {
         associated_token::mint = mint_pda,
         associated_token::authority = authority_pda,
     )]
-    pub token_pda: Account<'info, TokenAccount>,
+    pub token_pda: Box<Account<'info, TokenAccount>>,
 
     ///CHECK:
     #[account(
@@ -153,18 +369,170 @@ pub struct CreateToken<'info> {
     pub metadata: UncheckedAccount<'info>,
 
     ///CHECK:
+    #[account(
+        init_if_needed,
+        payer = signer,
+        associated_token::mint = mint_pda,
+        associated_token::authority = signer,
+    )]
+    pub target_token_account: Box<Account<'info, TokenAccount>>,
+
+    ///CHECK:
     #[account(address = mpl_token_metadata::ID)]
     pub token_metadata_program: UncheckedAccount<'info>,
     #[account(mut)]
     pub signer:Signer<'info>,
     pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info,System>,
+    pub token_program: Program<'info,Token>,
+    pub rent: Sysvar<'info, Rent>
+}
+
+#[derive(Accounts)]
+pub struct BuyTokenAccounts<'info> {
+
+    ///CHECK:
+    #[account(
+        mut,
+        seeds = [b"authority_pda".as_ref()],
+        bump
+    )]
+    pub authority_pda: AccountInfo<'info>,
+
+    ///CHECK:
+    #[account(
+        mut
+    )]
+    pub mint_pda: AccountInfo<'info>,
+
+    ///CHECK:
+    #[account(
+        mut,
+    )]
+    pub token_pda: Account<'info, TokenAccount>,
+
+    ///CHECK:
+    #[account(
+        init_if_needed,
+        payer = signer,
+        associated_token::mint = mint_pda,
+        associated_token::authority = signer,
+    )]
+    pub target_token_account: Account<'info, TokenAccount>,
+
+    ///CHECK:
+    #[account(
+        init_if_needed,
+        payer = signer,
+        space = 8 + 32 + std::mem::size_of::<TokenTradeStatus>() + 8,
+        seeds = [b"trade_status".as_ref(), token_pda.key().as_ref()],
+        bump,
+    )]
+    pub trade_status: Box<Account<'info, TokenTradeStatus>>,
+
+    ///CHECK:
+    pub associated_token_program: Program<'info, AssociatedToken>,
+
     pub system_program:Program<'info,System>,
     pub token_program:Program<'info,Token>,
-    pub rent:Sysvar<'info, Rent>
+    #[account(
+        mut
+    )]
+    pub signer:Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct SellTokenAccounts<'info> {
+
+    ///CHECK:
+    #[account(
+        mut,
+        seeds = [b"authority_pda".as_ref()],
+        bump
+    )]
+    pub authority_pda: AccountInfo<'info>,
+
+    ///CHECK:
+    #[account(
+        mut
+    )]
+    pub mint_pda: AccountInfo<'info>,
+
+    ///CHECK:
+    #[account(
+        mut,
+    )]
+    pub token_pda: Account<'info, TokenAccount>,
+
+    ///CHECK:
+    #[account(
+        mut,
+        associated_token::mint = mint_pda,
+        associated_token::authority = signer,
+    )]
+    pub target_token_account: Account<'info, TokenAccount>,
+
+    ///CHECK:
+    #[account(
+        init_if_needed,
+        payer = signer,
+        space = 8 + 32 + std::mem::size_of::<TokenTradeStatus>() + 8,
+        seeds = [b"trade_status".as_ref(), token_pda.key().as_ref()],
+        bump,
+    )]
+    pub trade_status: Box<Account<'info, TokenTradeStatus>>,
+
+    ///CHECK:
+    pub associated_token_program: Program<'info, AssociatedToken>,
+
+    pub system_program:Program<'info,System>,
+    pub token_program:Program<'info,Token>,
+    #[account(
+        mut
+    )]
+    pub signer:Signer<'info>,
 }
 
 #[account]
 pub struct Counter {
     pub count: u64,
     pub is_initialized: bool,
+}
+
+#[account]
+pub struct TokenTradeStatus {
+    pub trade_status: bool,
+}
+
+#[error_code]
+pub enum AmiErrorCode {
+    #[msg("Insufficient funds in the pool")]
+    InsufficientFunds,
+    #[msg("Conversion error")]
+    ConversionError,
+    #[msg("Invalid amount request")]
+    InvalidAmount,
+    #[msg("can not trade on bonding curve")]
+    InvalidTradeStatus
+}
+
+#[event]
+pub struct CreateTokenEvent {
+    pub sol_amount: f64,
+    pub token_amount: f64,
+    pub sol_price: f64,
+    pub token_name: String,
+    pub token_symbol: String,
+    pub mint_addr: Pubkey,
+    pub token_addr: Pubkey,
+}
+
+#[event]
+pub struct TradeTokenEvent {
+    pub trade_type: bool,
+    pub sol_amount: f64,
+    pub token_amount: f64,
+    pub sol_price: f64,
+    pub mint_addr: Pubkey,
+    pub token_addr: Pubkey,
 }
