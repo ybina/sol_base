@@ -3,7 +3,7 @@ use anchor_spl::{self, token::Token, associated_token::AssociatedToken};
 use anchor_spl::token::{self, MintTo, Mint, TokenAccount, Transfer};
 use mpl_token_metadata::instructions;
 
-declare_id!("7y72FYo5WiimjEG5hkxQK3iYGKDJCJHuCG4LHPxopvCV");
+declare_id!("6cHbTGzTfKMYHmtgV6JpjYp3QS25EbBs4qrsXgWU1UUG");
 
 #[program]
 pub mod test4 {
@@ -236,7 +236,19 @@ pub mod test4 {
         let sol_amount_lamp = sol_amount * 1_000_000_000.0;
         // transfer sol of token_pda to signer
         msg!("SELL: start transfer Sol to siger");
-        invoke_signed(
+        // invoke_signed(
+        //     &system_instruction::transfer(
+        //         &ctx.accounts.token_pda.key(), 
+        //         &ctx.accounts.signer.key(), 
+        //         sol_amount_lamp as u64),
+        //     &[
+        //         ctx.accounts.token_pda.to_account_info(),
+        //         ctx.accounts.signer.to_account_info(),
+        //         ctx.accounts.system_program.to_account_info(),
+        //     ],
+        //     &[auth_signer_seeds]
+        // )?;
+        invoke(
             &system_instruction::transfer(
                 &ctx.accounts.token_pda.key(), 
                 &ctx.accounts.signer.key(), 
@@ -246,7 +258,6 @@ pub mod test4 {
                 ctx.accounts.signer.to_account_info(),
                 ctx.accounts.system_program.to_account_info(),
             ],
-            &[auth_signer_seeds]
         )?;
         emit!(TradeTokenEvent{
             trade_type: false,
@@ -407,7 +418,7 @@ pub struct BuyTokenAccounts<'info> {
 
     ///CHECK:
     #[account(
-        mut,
+        mut
     )]
     pub token_pda: Account<'info, TokenAccount>,
 
@@ -459,9 +470,7 @@ pub struct SellTokenAccounts<'info> {
     pub mint_pda: AccountInfo<'info>,
 
     ///CHECK:
-    #[account(
-        mut,
-    )]
+    #[account(mut)]
     pub token_pda: Account<'info, TokenAccount>,
 
     ///CHECK:

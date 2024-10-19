@@ -62,9 +62,9 @@ describe("test4", () => {
 
   // it("buy test", async () => {
 
-  //   const tokenPdaAddress = "3pYZUZb98kNvtpDZ2amBCZnS16Y3uDgz9SfT1gh3jDgp"
+  //   const tokenPdaAddress = "r1gMAbVX57nJTqW3N5vHjGHpUax9fdG3uhvrkA7AAwX"
   //   const tokenPda = new anchor.web3.PublicKey(tokenPdaAddress);
-  //   const mintPdaAddress = "CTkEMpJfZYo65HiXnYhhcTPbwR2yyQnRg4DMdPFCXvRT"
+  //   const mintPdaAddress = "BeAe6BWd4JBxcZVVwagHLwqw17HVzY7nwt3SVYTpFhou"
   //   const mintPda = new anchor.web3.PublicKey(mintPdaAddress)
   //   try {
   //     const tx = await program.methods.buy(0.1).accounts({
@@ -88,9 +88,9 @@ describe("test4", () => {
 
   it("sell test", async () => {
 
-    const tokenPdaAddress = "3pYZUZb98kNvtpDZ2amBCZnS16Y3uDgz9SfT1gh3jDgp"
+    const tokenPdaAddress = "r1gMAbVX57nJTqW3N5vHjGHpUax9fdG3uhvrkA7AAwX"
     const tokenPda = new anchor.web3.PublicKey(tokenPdaAddress);
-    const mintPdaAddress = "CTkEMpJfZYo65HiXnYhhcTPbwR2yyQnRg4DMdPFCXvRT"
+    const mintPdaAddress = "BeAe6BWd4JBxcZVVwagHLwqw17HVzY7nwt3SVYTpFhou"
     const mintPda = new anchor.web3.PublicKey(mintPdaAddress)
     try {
       const tx = await program.methods.sell(0.12).accounts({
