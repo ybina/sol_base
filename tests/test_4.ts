@@ -15,22 +15,22 @@ describe("test4", () => {
   const provider = anchor.AnchorProvider.env();
   const signer = provider.wallet.publicKey;
 
-  // it("initialize", async ()=> {
-  //   try {
-  //     console.log("start call initialize")
-  //     const tx = await program.methods.initProgram().accounts({
-  //       signer: provider.wallet.publicKey,
-  //     }).rpc({
-  //       commitment: "confirmed",
-  //       preflightCommitment: "processed",
-  //       skipPreflight: true,
-  //       maxRetries: 3,
-  //     });
-  //     console.log("initialize tx:", tx)
-  //   } catch(error) {
-  //     console.log("err:", error)
-  //   }
-  // });
+  it("initialize", async ()=> {
+    try {
+      console.log("start call initialize")
+      const tx = await program.methods.initProgram().accounts({
+        signer: provider.wallet.publicKey,
+      }).rpc({
+        commitment: "confirmed",
+        preflightCommitment: "processed",
+        skipPreflight: true,
+        maxRetries: 3,
+      });
+      console.log("initialize tx:", tx)
+    } catch(error) {
+      console.log("err:", error)
+    }
+  });
 
 
   // it("create token!", async () => {
@@ -44,9 +44,9 @@ describe("test4", () => {
   //       program.programId
   //     );
   //     const tx = await program.methods.createToken(
-  //       "pd coin", "pdc", "https://www.google.com", 0.15).accounts({
+  //       "pd coin", "pdc", "https://www.google.com").accounts({
   //       signer: signer,
-  //       counter: counterPda,
+  //       //counter: counterPda,
   //     }).preInstructions([computeBudgetIx]).rpc({
   //       commitment: "confirmed",
   //       preflightCommitment: "processed",
@@ -61,13 +61,14 @@ describe("test4", () => {
   // });
 
   // it("buy test", async () => {
-
-  //   const tokenPdaAddress = "r1gMAbVX57nJTqW3N5vHjGHpUax9fdG3uhvrkA7AAwX"
-  //   const tokenPda = new anchor.web3.PublicKey(tokenPdaAddress);
-  //   const mintPdaAddress = "BeAe6BWd4JBxcZVVwagHLwqw17HVzY7nwt3SVYTpFhou"
+  //   const mintPdaAddress = "4c93ersvDvXdP2UdRid3ejZLFPRNt7dwikH27fKb5uee"
   //   const mintPda = new anchor.web3.PublicKey(mintPdaAddress)
+
+  //   const tokenPdaAddress = "23kwSXuEMgZrn6p9ZB1PLc9ewEjxbd9UjuLyeWBXCAdE"
+  //   const tokenPda = new anchor.web3.PublicKey(tokenPdaAddress);
+    
   //   try {
-  //     const tx = await program.methods.buy(0.1).accounts({
+  //     const tx = await program.methods.buy(0.2).accounts({
   //       signer: signer,
   //       tokenPda: tokenPda,
   //       mintPda: mintPda,
@@ -86,29 +87,32 @@ describe("test4", () => {
     
   // })
 
-  it("sell test", async () => {
+  // it("sell test", async () => {
+  //   const mintPdaAddress = "4c93ersvDvXdP2UdRid3ejZLFPRNt7dwikH27fKb5uee"
+  //   const mintPda = new anchor.web3.PublicKey(mintPdaAddress)
 
-    const tokenPdaAddress = "r1gMAbVX57nJTqW3N5vHjGHpUax9fdG3uhvrkA7AAwX"
-    const tokenPda = new anchor.web3.PublicKey(tokenPdaAddress);
-    const mintPdaAddress = "BeAe6BWd4JBxcZVVwagHLwqw17HVzY7nwt3SVYTpFhou"
-    const mintPda = new anchor.web3.PublicKey(mintPdaAddress)
-    try {
-      const tx = await program.methods.sell(0.12).accounts({
-        signer: signer,
-        tokenPda: tokenPda,
-        mintPda: mintPda,
-      }).rpc({
-        commitment: "confirmed",
-        preflightCommitment: "processed",
-        skipPreflight: true,
-        maxRetries: 3,
-      });
-      console.log("sell tx:", tx);
-
-    } catch(error) {
-      console.log("sell test failed:", error)
-
-    }
+  //   const tokenPdaAddress = "23kwSXuEMgZrn6p9ZB1PLc9ewEjxbd9UjuLyeWBXCAdE"
+  //   const tokenPda = new anchor.web3.PublicKey(tokenPdaAddress);
     
-  })
+  //   // const solValtAddress = "5ygKbAzMsEb8TJJocR7fBFLLyhEHdTyz3EGKt4RPpAEK"
+  //   // const solValtPda = new anchor.web3.PublicKey(solValtAddress)
+  //   try {
+  //     const tx = await program.methods.sell(0.1).accounts({
+  //       signer: signer,
+  //       tokenPda: tokenPda,
+  //       mintPda: mintPda,
+  //     }).rpc({
+  //       commitment: "confirmed",
+  //       preflightCommitment: "processed",
+  //       skipPreflight: true,
+  //       maxRetries: 3,
+  //     });
+  //     console.log("sell tx:", tx);
+
+  //   } catch(error) {
+  //     console.log("sell test failed:", error)
+
+  //   }
+
+  // })
 });
