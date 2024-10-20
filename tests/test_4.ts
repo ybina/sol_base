@@ -15,89 +15,84 @@ describe("test4", () => {
   const provider = anchor.AnchorProvider.env();
   const signer = provider.wallet.publicKey;
 
-  it("initialize", async ()=> {
-    try {
-      console.log("start call initialize")
-      const tx = await program.methods.initProgram().accounts({
-        signer: provider.wallet.publicKey,
-      }).rpc({
-        commitment: "confirmed",
-        preflightCommitment: "processed",
-        skipPreflight: true,
-        maxRetries: 3,
-      });
-      console.log("initialize tx:", tx)
-    } catch(error) {
-      console.log("err:", error)
-    }
-  });
-
-
-  // it("create token!", async () => {
-  //   // set maxmum CU
-  //   const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
-  //     units: 500_000, 
-  //   });
+  // it("initialize", async ()=> {
   //   try {
-  //     const [counterPda, counterBump] = await anchor.web3.PublicKey.findProgramAddressSync(
-  //       [Buffer.from("account_counter")],
-  //       program.programId
-  //     );
-  //     const tx = await program.methods.createToken(
-  //       "pd coin", "pdc", "https://www.google.com").accounts({
-  //       signer: signer,
-  //       //counter: counterPda,
-  //     }).preInstructions([computeBudgetIx]).rpc({
-  //       commitment: "confirmed",
-  //       preflightCommitment: "processed",
-  //       skipPreflight: true,
-  //       maxRetries: 3,
-  //     });
-  //     console.log("transaction signature", tx);
-
-  //   } catch(error) {
-  //     console.log("error:", error)
-  //   }
-  // });
-
-  // it("buy test", async () => {
-  //   const mintPdaAddress = "4c93ersvDvXdP2UdRid3ejZLFPRNt7dwikH27fKb5uee"
-  //   const mintPda = new anchor.web3.PublicKey(mintPdaAddress)
-
-  //   const tokenPdaAddress = "23kwSXuEMgZrn6p9ZB1PLc9ewEjxbd9UjuLyeWBXCAdE"
-  //   const tokenPda = new anchor.web3.PublicKey(tokenPdaAddress);
-    
-  //   try {
-  //     const tx = await program.methods.buy(0.2).accounts({
-  //       signer: signer,
-  //       tokenPda: tokenPda,
-  //       mintPda: mintPda,
+  //     console.log("start call initialize")
+  //     const tx = await program.methods.initProgram().accounts({
+  //       signer: provider.wallet.publicKey,
   //     }).rpc({
   //       commitment: "confirmed",
   //       preflightCommitment: "processed",
   //       skipPreflight: true,
   //       maxRetries: 3,
   //     });
-  //     console.log("buy tx:", tx);
-
+  //     console.log("initialize tx:", tx)
   //   } catch(error) {
-  //     console.log("buy test failed:", error)
-
+  //     console.log("err:", error)
   //   }
+  // });
+
+
+  it("create token!", async () => {
+    // set maxmum CU
+    const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
+      units: 500_000, 
+    });
+    try {
+      const tx = await program.methods.createToken(
+        "pd coin", "pde", "https://www.google.com").accounts({
+        signer: signer,
+        //counter: counterPda,
+      }).preInstructions([computeBudgetIx]).rpc({
+        commitment: "confirmed",
+        preflightCommitment: "processed",
+        skipPreflight: true,
+        maxRetries: 3,
+      });
+      console.log("transaction signature", tx);
+
+    } catch(error) {
+      console.log("error:", error)
+    }
+  });
+
+  it("buy test", async () => {
+    const mintPdaAddress = "uHkvtBdLFugNEZMuybz5MVp7sYiQ6V51oFUP4CnaqbU"
+    const mintPda = new anchor.web3.PublicKey(mintPdaAddress)
+
+    const tokenPdaAddress = "ALqcARrXRwo9XM8jMgXuqarUBW43cdWeZNB4MegSUxJ1"
+    const tokenPda = new anchor.web3.PublicKey(tokenPdaAddress);
     
-  // })
+    try {
+      const tx = await program.methods.buy(0.2).accounts({
+        signer: signer,
+        tokenPda: tokenPda,
+        mintPda: mintPda,
+      }).rpc({
+        commitment: "confirmed",
+        preflightCommitment: "processed",
+        skipPreflight: true,
+        maxRetries: 3,
+      });
+      console.log("buy tx:", tx);
+
+    } catch(error) {
+      console.log("buy test failed:", error)
+    }
+    
+  })
 
   // it("sell test", async () => {
-  //   const mintPdaAddress = "4c93ersvDvXdP2UdRid3ejZLFPRNt7dwikH27fKb5uee"
+  //   const mintPdaAddress = "uHkvtBdLFugNEZMuybz5MVp7sYiQ6V51oFUP4CnaqbU"
   //   const mintPda = new anchor.web3.PublicKey(mintPdaAddress)
 
-  //   const tokenPdaAddress = "23kwSXuEMgZrn6p9ZB1PLc9ewEjxbd9UjuLyeWBXCAdE"
+  //   const tokenPdaAddress = "ALqcARrXRwo9XM8jMgXuqarUBW43cdWeZNB4MegSUxJ1"
   //   const tokenPda = new anchor.web3.PublicKey(tokenPdaAddress);
     
   //   // const solValtAddress = "5ygKbAzMsEb8TJJocR7fBFLLyhEHdTyz3EGKt4RPpAEK"
   //   // const solValtPda = new anchor.web3.PublicKey(solValtAddress)
   //   try {
-  //     const tx = await program.methods.sell(0.1).accounts({
+  //     const tx = await program.methods.sell(0.66).accounts({
   //       signer: signer,
   //       tokenPda: tokenPda,
   //       mintPda: mintPda,

@@ -3,7 +3,7 @@ use anchor_spl::{self, token::Token, associated_token::AssociatedToken};
 use anchor_spl::token::{self, MintTo, Mint, TokenAccount, Transfer};
 use mpl_token_metadata::instructions;
 
-declare_id!("7pzBufvwPaFVQ1NbZL7MRBEkvUisrDdB8yd4bvK6ph3Z");
+declare_id!("2Vr7YuJrf7HXFXVM5g984K4PpznvXre71aM2TopqUQt4");
 
 #[program]
 pub mod test4 {
@@ -35,8 +35,8 @@ pub mod test4 {
         //msg!("---auth_pda:{}", ctx.accounts.authority_pda.key);
         msg!("---mint_pda:{}", ctx.accounts.mint_pda.key());
         msg!("---token_pda:{}", ctx.accounts.token_pda.key());
-        // let token_name:String = name.clone();
-        // let token_symbol:String = symbol.clone();
+        let token_name:String = name.clone();
+        let token_symbol:String = symbol.clone();
         // let (expected_metadata_pda, bump) = Pubkey::find_program_address(
         //     &[
         //         b"metadata",
@@ -119,15 +119,13 @@ pub mod test4 {
         // let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts).with_signer(&seeds_binding);
         // token::transfer(cpi_ctx, token_amount as u64)?;
 
-        // emit!(CreateTokenEvent {
-        //     sol_amount: sol_amount,
-        //     token_amount: token_amount,
-        //     sol_price: buy_pri,
-        //     token_name:token_name,
-        //     token_symbol:token_symbol,
-        //     mint_addr: ctx.accounts.mint_pda.key(),
-        //     token_addr: ctx.accounts.token_pda.key(),
-        // });
+        emit!(CreateTokenEvent {
+            token_name:token_name,
+            token_symbol:token_symbol,
+            token_amount: 1000000000.0,
+            mint_addr: ctx.accounts.mint_pda.key(),
+            token_addr: ctx.accounts.token_pda.key(),
+        });
         Ok(())
     }
 
@@ -427,7 +425,7 @@ pub struct BuyTokenAccounts<'info> {
 
     ///CHECK:
     #[account(
-        mut,
+        mut
     )]
     pub token_pda: Account<'info, TokenAccount>,
 
@@ -556,9 +554,8 @@ pub enum AmiErrorCode {
 
 #[event]
 pub struct CreateTokenEvent {
-    pub sol_amount: f64,
     pub token_amount: f64,
-    pub sol_price: f64,
+    
     pub token_name: String,
     pub token_symbol: String,
     pub mint_addr: Pubkey,
