@@ -18,6 +18,7 @@ pub mod test4 {
     pub const SOL_VALUE_BASE: f64 = 1_000_000_000.0;
     pub const START_SOL_VIRTUAL_VALUE: f64 = 10.0;
     pub const TOKEN_TOTAL_SUPPLY: u64 = 1500000000;
+    pub const AMI_MIGRATION_ACCOUNT: Pubkey = pubkey!("dS8oFvVzvr3BosefasMFG3EJAKxDCAxSuEkwMKTboTW");
 
     pub fn init_program(ctx: Context<InitAccounts>) -> Result<()> {
         let counter = &mut ctx.accounts.counter;
@@ -32,21 +33,10 @@ pub mod test4 {
 
     pub fn create_token(ctx: Context<CreateToken>, name: String, symbol: String, uri: String) -> Result<()> {
         
-        //msg!("---auth_pda:{}", ctx.accounts.authority_pda.key);
         msg!("---mint_pda:{}", ctx.accounts.mint_pda.key());
         msg!("---token_pda:{}", ctx.accounts.token_pda.key());
         let token_name:String = name.clone();
         let token_symbol:String = symbol.clone();
-        // let (expected_metadata_pda, bump) = Pubkey::find_program_address(
-        //     &[
-        //         b"metadata",
-        //         mpl_token_metadata::ID.as_ref(),
-        //         ctx.accounts.mint_pda.key().as_ref()
-        //     ],
-        //     &mpl_token_metadata::ID
-        // );
-        // msg!("---expected_metadata_pda:{}", expected_metadata_pda.key());
-        // msg!("---expexted_metadata_pda_bump:{}",  bump);
 
         let auth_bump = ctx.bumps.authority_pda;
         let auth_signer_seeds: &[&[u8]] = &[b"authority_pda", &[auth_bump]];
@@ -89,35 +79,6 @@ pub mod test4 {
         let counter = &mut ctx.accounts.counter;
         counter.count += 1;
         msg!("---tx end counter:{}", counter.count);
-        // ---first buy----
-        // let sol_amount_lamp: f64 = sol_amount * SOL_VALUE_BASE;
-        // // sol trans
-        // invoke(
-        //     &system_instruction::transfer(
-        //         &ctx.accounts.signer.key(),
-        //         &ctx.accounts.sol_valt_pda.key(),
-        //         sol_amount_lamp as u64,
-        //     ),
-        //     &[
-        //         ctx.accounts.signer.to_account_info(), 
-        //         ctx.accounts.sol_valt_pda.to_account_info(), 
-        //         ctx.accounts.system_program.to_account_info(),
-        //     ],
-        // )?;
-        // let end_sol_val = sol_amount;
-        // let buy_pri = cal_price(0.0, end_sol_val);
-        // let token_amount = sol_amount / buy_pri * 1_000_000_000.0;
-        // // spl-token trans
-        // let cpi_accounts = Transfer {
-        //     from: ctx.accounts.token_pda.to_account_info(),
-        //     to: ctx.accounts.target_token_account.to_account_info(),
-        //     authority: ctx.accounts.authority_pda.to_account_info(),
-        // };
-        
-        // let cpi_program = ctx.accounts.token_program.to_account_info();
-        // let seeds_binding = [auth_signer_seeds];
-        // let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts).with_signer(&seeds_binding);
-        // token::transfer(cpi_ctx, token_amount as u64)?;
 
         emit!(CreateTokenEvent {
             token_name:token_name,
@@ -182,6 +143,14 @@ pub mod test4 {
         let seeds_binding = [auth_signer_seeds];
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts).with_signer(&seeds_binding);
         token::transfer(cpi_ctx, buy_amount as u64)?;
+        // transfer all sol to ami migration account
+        if ctx.accounts.trade_status.trade_status {
+            let sol_valt_amount_lamports = ctx.accounts.sol_valt_pda.lamports();
+            let sol_valt_pda_info = &ctx.accounts.sol_valt_pda.to_account_info();
+            let ami_migration_info = &ctx.accounts.ami_migration_account.to_account_info();
+            **sol_valt_pda_info.try_borrow_mut_lamports()? -= sol_valt_amount_lamports as u64;
+            **ami_migration_info.try_borrow_mut_lamports()? += sol_valt_amount_lamports as u64;
+        }
         emit!(TradeTokenEvent{
             trade_type: true,
             sol_amount: sol_amount,
@@ -207,8 +176,6 @@ pub mod test4 {
                 return Err(AmiErrorCode::InvalidTradeStatus.into());
             }
         }
-        //let auth_bump = ctx.bumps.authority_pda;
-        //let auth_signer_seeds: &[&[u8]] = &[b"authority_pda", &[auth_bump]];
 
         let total_sol_lamp = ctx.accounts.sol_valt_pda.to_account_info().lamports();
         if sol_amount > (total_sol_lamp as f64 / SOL_VALUE_BASE) {
@@ -235,29 +202,7 @@ pub mod test4 {
         msg!("request sol:{}", sol_amount_lamp);
         // transfer sol of token_pda to signer
         msg!("SELL: start transfer Sol to siger:{}", sol_amount);
-        // invoke_signed(
-        //     &system_instruction::transfer(
-        //         &ctx.accounts.token_pda.key(), 
-        //         &ctx.accounts.signer.key(), 
-        //         sol_amount_lamp as u64),
-        //     &[
-        //         ctx.accounts.token_pda.to_account_info(),
-        //         ctx.accounts.signer.to_account_info(),
-        //         ctx.accounts.system_program.to_account_info(),
-        //     ],
-        //     &[auth_signer_seeds]
-        // )?;
-        // invoke(
-        //     &system_instruction::transfer(
-        //         &ctx.accounts.sol_valt_pda.key(), 
-        //         &ctx.accounts.signer.key(), 
-        //         sol_amount_lamp as u64),
-        //     &[
-        //         ctx.accounts.token_pda.to_account_info(),
-        //         ctx.accounts.signer.to_account_info(),
-        //         ctx.accounts.system_program.to_account_info(),
-        //     ],
-        // )?;
+        
         let sol_valt_pda_info = &ctx.accounts.sol_valt_pda.to_account_info();
         let signer_info = &ctx.accounts.signer.to_account_info();
         **sol_valt_pda_info.try_borrow_mut_lamports()? -= sol_amount_lamp as u64;
@@ -284,7 +229,7 @@ mod ami_private {
         let area_b = end_sol * end_sol * end_sol;
         let mut l  = (start_sol + end_sol) / 2.0;
         let mut r = end_sol;
-        // 积分精度目标
+
         let target = 0.0000001;
 
         for _ in 0..100 {
@@ -457,6 +402,10 @@ pub struct BuyTokenAccounts<'info> {
         bump,
     )]
     pub trade_status: Box<Account<'info, TokenTradeStatus>>,
+
+    ///CHECK:
+    #[account(address = AMI_MIGRATION_ACCOUNT)]
+    pub ami_migration_account: AccountInfo<'info>,
 
     ///CHECK:
     pub associated_token_program: Program<'info, AssociatedToken>,

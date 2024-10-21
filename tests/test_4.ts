@@ -40,7 +40,7 @@ describe("test4", () => {
     });
     try {
       const tx = await program.methods.createToken(
-        "pd coin", "pde", "https://www.google.com").accounts({
+        "pd coin", "pdami", "https://www.google.com").accounts({
         signer: signer,
         //counter: counterPda,
       }).preInstructions([computeBudgetIx]).rpc({
@@ -82,32 +82,32 @@ describe("test4", () => {
     
   })
 
-  // it("sell test", async () => {
-  //   const mintPdaAddress = "uHkvtBdLFugNEZMuybz5MVp7sYiQ6V51oFUP4CnaqbU"
-  //   const mintPda = new anchor.web3.PublicKey(mintPdaAddress)
+  it("sell test", async () => {
+    const mintPdaAddress = "uHkvtBdLFugNEZMuybz5MVp7sYiQ6V51oFUP4CnaqbU"
+    const mintPda = new anchor.web3.PublicKey(mintPdaAddress)
 
-  //   const tokenPdaAddress = "ALqcARrXRwo9XM8jMgXuqarUBW43cdWeZNB4MegSUxJ1"
-  //   const tokenPda = new anchor.web3.PublicKey(tokenPdaAddress);
+    const tokenPdaAddress = "ALqcARrXRwo9XM8jMgXuqarUBW43cdWeZNB4MegSUxJ1"
+    const tokenPda = new anchor.web3.PublicKey(tokenPdaAddress);
     
-  //   // const solValtAddress = "5ygKbAzMsEb8TJJocR7fBFLLyhEHdTyz3EGKt4RPpAEK"
-  //   // const solValtPda = new anchor.web3.PublicKey(solValtAddress)
-  //   try {
-  //     const tx = await program.methods.sell(0.66).accounts({
-  //       signer: signer,
-  //       tokenPda: tokenPda,
-  //       mintPda: mintPda,
-  //     }).rpc({
-  //       commitment: "confirmed",
-  //       preflightCommitment: "processed",
-  //       skipPreflight: true,
-  //       maxRetries: 3,
-  //     });
-  //     console.log("sell tx:", tx);
+    // const solValtAddress = "5ygKbAzMsEb8TJJocR7fBFLLyhEHdTyz3EGKt4RPpAEK"
+    // const solValtPda = new anchor.web3.PublicKey(solValtAddress)
+    try {
+      const tx = await program.methods.sell(0.66).accounts({
+        signer: signer,
+        tokenPda: tokenPda,
+        mintPda: mintPda,
+      }).rpc({
+        commitment: "confirmed",
+        preflightCommitment: "processed",
+        skipPreflight: true,
+        maxRetries: 3,
+      });
+      console.log("sell tx:", tx);
 
-  //   } catch(error) {
-  //     console.log("sell test failed:", error)
+    } catch(error) {
+      console.log("sell test failed:", error)
 
-  //   }
+    }
 
-  // })
+  })
 });
